@@ -1,0 +1,111 @@
+name: Generate & Publish Protos
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  generate-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # Install tools
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          server-id: github
+
+      - name: Install buf
+        uses: bufbuild/buf-setup-action@v1
+
+      # ── Generate code ──────────────────────────────────────────
+      - name: Generate Java & Go from protos
+        run: buf generate
+
+      # ── Publish Go module ──────────────────────────────────────
+      - name: Set up Go module for generated code
+        working-directory: gen/go
+        run: |
+          # Init go.mod if it doesn't exist yet
+          if [ ! -f go.mod ]; then
+            go mod init github.com/${{ github.repository }}/gen/go
+          fi
+          go mod tidy
+
+      - name: Push to tasked-protos-go repo
+        run: |
+          git clone https://x-access-token:${{ secrets.PROTO_PAT }}@github.com/anuragpandey01/tasked-protos-go.git /tmp/tasked-protos-go
+          cp -r gen/go/. /tmp/tasked-protos-go/
+          cd /tmp/tasked-protos-go
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet || git commit -m "chore: regenerate from ${{ github.sha }}"
+          VERSION="v0.0.0-$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::8}"
+          git tag "$VERSION"
+          git push origin main --tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Publish Java (Maven) to GitHub Packages ────────────────
+      - name: Set version from tag
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=0.0.0-SNAPSHOT" >> $GITHUB_OUTPUT
+          fi
+      - name: Create pom.xml for generated Java
+        run: |
+          cat > gen/java/pom.xml << 'EOF'
+          <project>
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>com.github.${{ github.repository_owner }}</groupId>
+            <artifactId>tasked-protos-java</artifactId>
+            <version>${{ steps.version.outputs.VERSION }}</version>
+            <packaging>jar</packaging>
+
+            <distributionManagement>
+              <repository>
+                <id>github</id>
+                <url>https://maven.pkg.github.com/${{ github.repository }}</url>
+              </repository>
+            </distributionManagement>
+
+            <dependencies>
+              <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>3.25.3</version>
+              </dependency>
+              <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-stub</artifactId>
+                <version>1.63.0</version>
+              </dependency>
+            </dependencies>
+          </project>
+          EOF
+
+      - name: Publish Java package to GitHub Packages
+        working-directory: gen/java
+        run: mvn --batch-mode deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
