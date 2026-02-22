@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package notification.v1;
+
+service NotificationService {
+  rpc NotifyUser (NotifyUserRequest) returns (NotifyUserResponse);
+}
+
+message NotifyUserRequest {
+  string user_id = 1;
+  string message = 2;
+}
+
+message NotifyUserResponse {
+  bool sent = 1;
+}
