@@ -8,6 +8,7 @@ service TaskService {
   rpc CreateTask (CreateTaskRequest) returns (CreateTaskResponse);
   rpc GetTasks (google.protobuf.Empty) returns (GetTasksResponse);
   rpc GetTask (GetTaskRequest) returns (Task);
+  rpc DeleteTask (DeleteTaskRequest) returns (google.protobuf.Empty);
 }
 
 message GetTasksResponse{
@@ -29,5 +30,9 @@ message CreateTaskResponse {
 }
 
 message GetTaskRequest{
+  string id = 1;
+}
+
+message DeleteTaskRequest{
   string id = 1;
 }
