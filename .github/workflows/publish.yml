@@ -44,7 +44,7 @@ jobs:
         run: |
           # Init go.mod if it doesn't exist yet
           if [ ! -f go.mod ]; then
-            go mod init github.com/${{ github.repository }}/gen/go
+            go mod init github.com/${{ github.repository }}
           fi
           go mod tidy
 
@@ -78,7 +78,7 @@ jobs:
           <project>
             <modelVersion>4.0.0</modelVersion>
             <groupId>com.github.${{ github.repository_owner }}</groupId>
-            <artifactId>tasked-protos-java</artifactId>
+            <artifactId>tasked-proto-java</artifactId>
             <version>${{ steps.version.outputs.VERSION }}</version>
             <packaging>jar</packaging>
 
