@@ -7,6 +7,7 @@ import "google/protobuf/empty.proto";
 service TaskService {
   rpc CreateTask (CreateTaskRequest) returns (CreateTaskResponse);
   rpc GetTasks (google.protobuf.Empty) returns (GetTasksResponse);
+  rpc GetTask (GetTaskRequest) returns (Task);
 }
 
 message GetTasksResponse{
@@ -24,5 +25,9 @@ message CreateTaskRequest {
 }
 
 message CreateTaskResponse {
+  string id = 1;
+}
+
+message GetTaskRequest{
   string id = 1;
 }
