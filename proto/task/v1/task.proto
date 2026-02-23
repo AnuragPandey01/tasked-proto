@@ -2,8 +2,20 @@ syntax = "proto3";
 
 package task.v1;
 
+import "google/protobuf/empty.proto";
+
 service TaskService {
   rpc CreateTask (CreateTaskRequest) returns (CreateTaskResponse);
+  rpc GetTasks (google.protobuf.Empty) returns (GetTasksResponse);
+}
+
+message GetTasksResponse{
+  repeated Task tasks = 1;
+}
+
+message Task{
+  string id = 1;
+  string title = 2;
 }
 
 message CreateTaskRequest {
